@@ -108,15 +108,19 @@ El analisis de SonarQube se documenta como ejecucion local porque el servidor `h
 ### Analisis inicial
 
 ![Dashboard inicial](docs/sonar-dashboard-inicial.png)
+
 ![Bugs iniciales](docs/sonar-bugs-inicial.png)
+
 ![Code Smells iniciales](docs/sonar-code-smells-inicial.png)
+
 
 ### Segundo analisis
 
-Guardar las capturas finales con estos nombres:
 
 ![alt text](docs/sonar-bugs-inicial.png)
+
 ![alt text](docs/sonar-code-smells-inicial.png)
+
 ![alt text](docs/sonar-dashboard-inicial.png)
 
 ## Interpretacion
