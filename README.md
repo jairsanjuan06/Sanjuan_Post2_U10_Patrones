@@ -115,9 +115,9 @@ El analisis de SonarQube se documenta como ejecucion local porque el servidor `h
 
 Guardar las capturas finales con estos nombres:
 
-![Dashboard final](docs/sonar-dashboard-final.png)
-![Quality Gate final](docs/sonar-quality-gate-final.png)
-![Issues finales](docs/sonar-issues-final.png)
+![alt text](docs/sonar-bugs-inicial.png)
+![alt text](docs/sonar-code-smells-inicial.png)
+![alt text](docs/sonar-dashboard-inicial.png)
 
 ## Interpretacion
 
