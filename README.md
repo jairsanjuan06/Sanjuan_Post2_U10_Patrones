@@ -1,103 +1,124 @@
-# Productos Service - Analisis SonarQube
+# Productos Service - Post-Contenido 2
 
-Proyecto practico de la Unidad 10 del curso Patrones de Diseno de Software. El objetivo es configurar un proyecto Spring Boot con codigo intencionalmente imperfecto, integrar JaCoCo, ejecutar un analisis inicial con SonarQube y documentar los hallazgos principales.
+[![CI con SonarQube](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-## Tecnologias utilizadas
+Proyecto practico de la Unidad 10 del curso Patrones de Diseno de Software. Este segundo laboratorio configura un Quality Gate personalizado, corrige hallazgos del primer analisis de SonarQube, mejora la cobertura con JaCoCo e integra una verificacion automatica con GitHub Actions.
 
-- Java 21
-- Spring Boot 3.3.5
-- Maven
-- H2 Database
-- Lombok
-- JaCoCo
-- SonarQube Community Edition
+## Quality Gate personalizado
+
+En SonarQube se creo el Quality Gate **Estandar Universidad** y se asigno al proyecto `Productos Service`.
+
+Condiciones configuradas:
+
+| Metrica | Condicion |
+|---------|-----------|
+| Bugs | Bloquear si es mayor que 0 |
+| Coverage | Bloquear si es menor que 60% |
+| Code Smells | Bloquear si es mayor que 5 |
+| Duplicated Lines (%) | Bloquear si es mayor que 5% |
 
 ## Ejecucion local
 
 Levantar SonarQube con Docker:
 
 ```bash
-docker run -d \
-  --name sonarqube \
-  -p 9000:9000 \
-  -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
-  sonarqube:community
+docker start sonarqube
 ```
 
-Entrar a `http://localhost:9000` con `admin / admin`, cambiar la contrasena inicial y crear el proyecto manualmente:
+Si el contenedor no existe, crearlo con:
 
-- Project name: `productos-service`
-- Project key: `com.universidad:productos-service`
+```bash
+docker run -d --name sonarqube -p 9000:9000 -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:community
+```
 
-Compilar, ejecutar pruebas y generar el reporte de cobertura:
+Compilar, ejecutar pruebas y generar cobertura:
 
 ```bash
 mvn clean verify
 ```
 
-Ejecutar el analisis de SonarQube:
+Ejecutar el segundo analisis de SonarQube:
 
 ```bash
-mvn sonar:sonar -Dsonar.token=TU_TOKEN
+mvn clean verify sonar:sonar "-Dsonar.token=TU_TOKEN" "-Dsonar.host.url=http://localhost:9000"
 ```
 
-Tambien se puede ejecutar todo en un solo comando:
+## Comparacion antes y despues
 
-```bash
-mvn clean verify sonar:sonar -Dsonar.token=TU_TOKEN
-```
+| Metrica | Analisis inicial | Segundo analisis |
+|---------|------------------|------------------|
+| Bugs | Pendiente de dashboard inicial | Pendiente de dashboard final |
+| Vulnerabilidades | Pendiente de dashboard inicial | Pendiente de dashboard final |
+| Code Smells | Pendiente de dashboard inicial | Pendiente de dashboard final |
+| Cobertura de lineas | 16.7% segun JaCoCo local | 89.7% segun JaCoCo local |
+| Quality Gate | Fallido o pendiente | Pendiente de dashboard final |
 
-## Estado inicial del analisis
+## Correcciones aplicadas
 
-| Categoria | Cantidad | Rating |
-|-----------|----------|--------|
-| Bugs | Pendiente de dashboard | Pendiente |
-| Vulnerabilidades | Pendiente de dashboard | Pendiente |
-| Code Smells | Pendiente de dashboard | Pendiente |
-| Cobertura | 16.7% segun JaCoCo local | - |
-
-## Hallazgos principales identificados
-
-### Bug 1: Retorno nulo al buscar un producto inexistente
+### Bug corregido: retorno nulo en buscar()
 
 - Archivo: `src/main/java/com/universidad/productosservice/service/ProductoService.java`
-- Ubicacion: metodo `buscar(Long id)`
-- Descripcion: el metodo retorna `null` cuando el producto no existe. Esto puede causar errores posteriores como `NullPointerException` en las capas que consumen el servicio.
-- Severidad esperada: Major
+- Antes: `repo.findById(id).orElse(null)`
+- Despues: `orElseThrow(...)` con `NoSuchElementException`
+- Impacto: evita que las capas consumidoras reciban `null` y sufran un `NullPointerException` posterior.
 
-### Code Smell 1: Inyeccion de dependencia por campo
+### Code Smell 1: inyeccion por campo
 
-- Archivo: `src/main/java/com/universidad/productosservice/service/ProductoService.java`
-- Ubicacion: atributo `repo`
-- Descripcion: el servicio usa `@Autowired` directamente sobre el campo. Esta practica reduce la facilidad de prueba y hace menos explicitas las dependencias de la clase.
-- Severidad esperada: Major
+- Antes: `@Autowired` sobre el atributo `repo`.
+- Despues: inyeccion por constructor con `private final ProductoRepository productoRepository`.
+- Impacto: dependencias mas explicitas y servicio mas facil de probar.
 
-### Code Smell 2: Metodo con complejidad ciclomática alta
+### Code Smell 2: validacion de cadena vacia
 
-- Archivo: `src/main/java/com/universidad/productosservice/domain/Producto.java`
-- Ubicacion: metodo `getEstado()`
-- Descripcion: el metodo contiene varias condiciones encadenadas para clasificar el stock. Segun la guia de la Unidad 10, cada punto de decision incrementa la complejidad ciclomática y exige mas casos de prueba independientes.
-- Severidad esperada: Major
+- Antes: `n == null || n.equals("")`.
+- Despues: `nombre == null || nombre.isBlank()`.
+- Impacto: tambien rechaza cadenas con solo espacios.
 
-### Code Smell 3: Parametros no utilizados y responsabilidad incompleta
+### Code Smell 3: complejidad del metodo principal
 
-- Archivo: `src/main/java/com/universidad/productosservice/service/ProductoService.java`
-- Ubicacion: metodo `procesarProducto(...)`
-- Descripcion: los parametros `cat`, `activo` y `proveedor` no se usan. Esto senala una responsabilidad incompleta y puede confundir a quien mantenga el codigo.
-- Severidad esperada: Minor/Major
+- Antes: `procesarProducto(...)` mezclaba orquestacion, validaciones y persistencia.
+- Despues: se extrajo `validarDatos(...)`.
+- Impacto: el metodo principal queda mas simple y enfocado.
+
+## Pruebas agregadas
+
+Se agregaron pruebas para:
+
+- Validar que `buscar()` lanza `NoSuchElementException` cuando el producto no existe.
+- Cubrir validaciones de nombre, precio y stock.
+- Cubrir el flujo exitoso de `procesarProducto(...)`.
+- Cubrir varios estados de stock en `Producto.getEstado()`.
+
+Cobertura local despues de las correcciones:
+
+| Tipo | Cobertura |
+|------|-----------|
+| Instrucciones | 92.3% |
+| Ramas | 83.3% |
+| Lineas | 89.7% |
+
+## GitHub Actions
+
+El workflow `.github/workflows/ci.yml` ejecuta `mvn clean verify` en cada push o pull request a `main`.
+
+El analisis de SonarQube se documenta como ejecucion local porque el servidor `http://localhost:9000` corre en Docker dentro del equipo del estudiante y no es accesible desde los runners publicos de GitHub Actions.
 
 ## Capturas del dashboard
 
-Despues de ejecutar el analisis, guardar las capturas reales en la carpeta `docs/` con estos nombres:
+### Analisis inicial
 
-![alt text](<Capturas de pantalla/Sonar-Dashboard.png>)
+![Dashboard inicial](docs/sonar-dashboard-inicial.png)
+![Bugs iniciales](docs/sonar-bugs-inicial.png)
+![Code Smells iniciales](docs/sonar-code-smells-inicial.png)
 
-![alt text](<Capturas de pantalla/Sonar-code-smells.png>)
+### Segundo analisis
 
-![alt text](<Capturas de pantalla/Sonar-Bugs.png>)
+Guardar las capturas finales con estos nombres:
 
-## Interpretacion inicial
+![Dashboard final](docs/sonar-dashboard-final.png)
+![Quality Gate final](docs/sonar-quality-gate-final.png)
+![Issues finales](docs/sonar-issues-final.png)
 
-El estado inicial del proyecto debe mostrar problemas de mantenibilidad y cobertura insuficiente. Esto es intencional: el objetivo del Post-Contenido 1 no es corregir los hallazgos, sino ejecutar el analisis estatico, interpretar el dashboard y clasificar los resultados en Bugs, Vulnerabilidades, Code Smells y cobertura.
+## Interpretacion
 
-La cobertura generada por JaCoCo sera baja porque el proyecto incluye solo una prueba minima. De acuerdo con la guia de la Unidad 10, la cobertura no garantiza ausencia de bugs, pero sirve como evidencia objetiva para identificar partes del codigo que no han sido ejercitadas por pruebas automatizadas.
+El segundo analisis debe mostrar una mejora frente al Post-Contenido 1: se elimina el bug asociado al retorno nulo, se reducen Code Smells de alto impacto y la cobertura local aumenta por la incorporacion de pruebas automatizadas. Si el Quality Gate no pasa, el dashboard permite identificar con precision que condicion sigue pendiente.

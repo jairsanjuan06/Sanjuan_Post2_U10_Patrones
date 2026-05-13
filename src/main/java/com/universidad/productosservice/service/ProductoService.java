@@ -2,45 +2,52 @@ package com.universidad.productosservice.service;
 
 import com.universidad.productosservice.domain.Producto;
 import com.universidad.productosservice.repository.ProductoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class ProductoService {
 
-    @Autowired
-    private ProductoRepository repo;
+    private final ProductoRepository productoRepository;
 
-    public Producto procesarProducto(String n, Double p, Integer s,
+    public ProductoService(ProductoRepository productoRepository) {
+        this.productoRepository = productoRepository;
+    }
+
+    public Producto procesarProducto(String nombre, Double precio, Integer stock,
             String cat, boolean activo, String proveedor) {
+        validarDatos(nombre, precio, stock);
+
         Producto producto = new Producto();
-        if (n == null || n.equals("")) {
-            throw new IllegalArgumentException("nombre requerido");
+        producto.setNombre(nombre.strip());
+        producto.setPrecio(precio);
+        producto.setStock(stock);
+        return productoRepository.save(producto);
+    }
+
+    private void validarDatos(String nombre, Double precio, Integer stock) {
+        if (nombre == null || nombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre no puede estar vacio");
         }
-        if (p == null) {
-            throw new IllegalArgumentException("precio requerido");
-        } else if (p <= 0) {
-            throw new IllegalArgumentException("precio invalido");
-        } else if (p > 999999) {
-            throw new IllegalArgumentException("precio excesivo");
+        if (precio == null || precio <= 0) {
+            throw new IllegalArgumentException("El precio debe ser mayor a cero");
         }
-        if (s == null || s < 0) {
-            throw new IllegalArgumentException("stock invalido");
+        if (precio > 999999) {
+            throw new IllegalArgumentException("El precio excede el maximo permitido");
         }
-        producto.setNombre(n);
-        producto.setPrecio(p);
-        producto.setStock(s);
-        // TODO: implementar logica de categoria y proveedor
-        return repo.save(producto);
+        if (stock == null || stock < 0) {
+            throw new IllegalArgumentException("El stock no puede ser negativo");
+        }
     }
 
     public List<Producto> listar() {
-        return repo.findAll();
+        return productoRepository.findAll();
     }
 
     public Producto buscar(Long id) {
-        return repo.findById(id).orElse(null);
+        return productoRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado: " + id));
     }
 }

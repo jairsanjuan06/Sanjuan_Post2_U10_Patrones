@@ -1,0 +1,31 @@
+name: CI con SonarQube
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Compilar y ejecutar pruebas
+        run: mvn -B clean verify --no-transfer-progress
+
+      # El analisis SonarQube se ejecuta localmente porque localhost:9000
+      # no es accesible desde los runners publicos de GitHub Actions.
+      # Para SonarQube Cloud, configurar SONAR_TOKEN y sonar.host.url.
